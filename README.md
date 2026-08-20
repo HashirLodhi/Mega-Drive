@@ -102,6 +102,12 @@ npm run build
 
 Fork maintainers should create their own Google Desktop OAuth client and set `MEGADRIVE_GOOGLE_CLIENT_ID`, rather than publishing builds under MegaDrive's official OAuth identity. See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md).
 
+## Troubleshooting Google authorization
+
+If MegaDrive says that Google authorization expired or came from an older OAuth client, click **Connect your first Google account** or **Add account** and authorize that account again. Refresh tokens cannot be moved between OAuth client IDs.
+
+While the Google OAuth app remains in **Testing**, refresh tokens for Drive access normally expire after seven days. Moving the consent screen to production and completing any required verification removes that testing limitation. Users can always reconnect in the meantime.
+
 ## Important Google limitations
 
 - MegaDrive can only perform operations allowed by each file's Google capabilities.

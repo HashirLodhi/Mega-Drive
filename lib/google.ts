@@ -6,6 +6,18 @@ import { bundledGoogleClientId } from "./oauth-client";
 const tokenEndpoint = "https://oauth2.googleapis.com/token";
 const driveBase = "https://www.googleapis.com/drive/v3";
 
+type GoogleTokenError = { error?: string; error_description?: string; error_subtype?: string };
+
+async function tokenFailure(response: Response, operation: "exchange" | "refresh", email?: string) {
+  const body = await response.json().catch(() => ({})) as GoogleTokenError;
+  if (operation === "refresh" && (body.error === "invalid_grant" || response.status === 400)) {
+    const account = email ? ` for ${email}` : "";
+    return new Error(`Google authorization${account} has expired or was created by an older MegaDrive OAuth client. Connect this account again.`);
+  }
+  const detail = body.error_description || body.error || `HTTP ${response.status}`;
+  return new Error(`Google token ${operation} failed: ${detail}`);
+}
+
 function oauthConfig() {
   const clientId = process.env.MEGADRIVE_GOOGLE_CLIENT_ID || bundledGoogleClientId;
   if (!clientId) throw new Error("Google Desktop OAuth client ID is not configured");
@@ -32,7 +44,7 @@ export function authorizationUrl(state: string, redirectUri: string, codeChallen
 export async function exchangeCode(code: string, redirectUri: string, codeVerifier: string): Promise<StoredToken> {
   const { clientId } = oauthConfig();
   const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: clientId, code_verifier: codeVerifier, redirect_uri: redirectUri, grant_type: "authorization_code" }), cache: "no-store" });
-  if (!response.ok) throw new Error(`Google token exchange failed: ${await response.text()}`);
+  if (!response.ok) throw await tokenFailure(response, "exchange");
   const result = await response.json() as { access_token: string; refresh_token?: string; expires_in: number; scope: string };
   if (!result.refresh_token) throw new Error("Google did not return a refresh token. Revoke the app grant and connect again.");
   return { accessToken: result.access_token, refreshToken: result.refresh_token, expiresAt: Date.now() + result.expires_in * 1000, scope: result.scope };
@@ -42,7 +54,7 @@ async function accessToken(account: ConnectedAccount) {
   if (account.token.expiresAt > Date.now() + 60_000) return account.token.accessToken;
   const { clientId } = oauthConfig();
   const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: clientId, refresh_token: account.token.refreshToken, grant_type: "refresh_token" }), cache: "no-store" });
-  if (!response.ok) throw new Error(`Google token refresh failed: ${response.status}`);
+  if (!response.ok) throw await tokenFailure(response, "refresh", account.email);
   const result = await response.json() as { access_token: string; expires_in: number; scope?: string };
   account.token = { ...account.token, accessToken: result.access_token, expiresAt: Date.now() + result.expires_in * 1000, scope: result.scope ?? account.token.scope };
   await updateAccount(account);

@@ -45,11 +45,12 @@ def private_value(path: Path, factory) -> str:
 
 
 def command(name: str) -> str:
-    candidate = f"{name}.cmd" if sys.platform == "win32" else name
-    located = shutil.which(candidate)
-    if not located:
-        raise RuntimeError(f"{name} is required. Install Node.js 22.13+ from https://nodejs.org/")
-    return located
+    candidates = (f"{name}.cmd", f"{name}.exe", name) if sys.platform == "win32" else (name,)
+    for candidate in candidates:
+        located = shutil.which(candidate)
+        if located:
+            return located
+    raise RuntimeError(f"{name} is required. Install Node.js 22.13+ from https://nodejs.org/")
 
 
 def check_node() -> tuple[str, str]:

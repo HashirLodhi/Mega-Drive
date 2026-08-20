@@ -45,7 +45,7 @@ After the dashboard opens, click **Connect your first Google account**. While th
 
 Stop MegaDrive with `Ctrl+C` in the terminal. Start it again with `python app.py`.
 
-No `.env` file, Google client secret, Redis database, or Vercel account is required.
+No `.env` file, personal Google Cloud setup, Redis database, or Vercel account is required.
 
 ## Launcher options
 
@@ -76,14 +76,14 @@ This directory contains the local encryption key, encrypted Google refresh token
 - OAuth uses a Google Desktop client with PKCE.
 - Login happens in the system browser.
 - OAuth callbacks return only to a loopback address.
-- No Google client secret is used or shipped.
+- The Desktop OAuth credentials are application identifiers, not user credentials; PKCE protects each sign-in.
 - Refresh tokens are encrypted with AES-256-GCM at rest.
 - The server binds only to `127.0.0.1`.
 - OAuth state and PKCE verifier cookies are HTTP-only and short-lived.
 - Disconnecting an account revokes the Google grant and removes its local token.
 - Source files remain untouched during transfers until the destination is verified.
 
-The bundled Desktop OAuth client ID is a public application identifier. The downloaded Google credential JSON and its unused secret are deliberately excluded from Git.
+Google requires this Desktop client to send its client ID and client secret during token exchange. Installed applications cannot keep either value confidential, so MegaDrive bundles them as application identifiers and uses PKCE to protect every authorization-code exchange. User access and refresh tokens remain encrypted locally and are never committed.
 
 ## Development
 
@@ -100,7 +100,7 @@ npm test
 npm run build
 ```
 
-Fork maintainers should create their own Google Desktop OAuth client and set `MEGADRIVE_GOOGLE_CLIENT_ID`, rather than publishing builds under MegaDrive's official OAuth identity. See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md).
+Fork maintainers should create their own Google Desktop OAuth client and set `MEGADRIVE_GOOGLE_CLIENT_ID` and `MEGADRIVE_GOOGLE_CLIENT_SECRET`, rather than publishing builds under MegaDrive's official OAuth identity. See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md).
 
 ## Troubleshooting Google authorization
 

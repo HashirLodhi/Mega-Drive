@@ -11,9 +11,9 @@ The official build uses the **MegaDrive Production** Google Cloud project.
 3. Add development accounts under **Audience → Test users** while the app remains in Testing.
 4. Add `openid`, `userinfo.email`, `userinfo.profile`, and `https://www.googleapis.com/auth/drive` under **Data Access**.
 5. Create an OAuth client of type **Desktop app**.
-6. Keep the downloaded `client_secret_*.json` outside version control.
+6. Keep the downloaded `client_secret_*.json` outside version control; copy only the Desktop client values into your private build configuration.
 
-MegaDrive embeds only the Desktop client ID. Desktop OAuth uses PKCE and does not use the client secret.
+MegaDrive's official build embeds its Desktop client ID and client secret because installed applications cannot keep these identifiers confidential. PKCE protects each authorization-code exchange. Never substitute a confidential Web application client.
 
 ## Forks and local overrides
 
@@ -21,10 +21,11 @@ Fork maintainers should create a separate Google Cloud project and Desktop clien
 
 ```powershell
 $env:MEGADRIVE_GOOGLE_CLIENT_ID="YOUR_DESKTOP_CLIENT_ID.apps.googleusercontent.com"
+$env:MEGADRIVE_GOOGLE_CLIENT_SECRET="YOUR_DESKTOP_CLIENT_SECRET"
 python app.py
 ```
 
-Never publish a Web OAuth client secret or downloaded credential JSON.
+Never publish a Web OAuth client secret, user token, or downloaded credential JSON. A distributed Desktop client's embedded secret is not a confidential credential, but fork maintainers should still use their own OAuth project.
 
 ## OAuth verification
 

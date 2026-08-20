@@ -1,38 +1,61 @@
-# MegaDrive production setup
+# MegaDrive maintainer setup
 
-MegaDrive starts empty and uses only live Google Drive data after account connection.
+Ordinary users do not need Google Cloud configuration. This document is for the official maintainer and fork authors.
 
-## Google Cloud configuration
+## Official Google project
 
-1. Create or select a Google Cloud project and enable **Google Drive API**.
-2. Configure the OAuth consent screen. While its publishing status is Testing, add every account you will connect as a test user.
-3. Create an **OAuth client ID** of type **Web application**.
-4. Add `http://localhost:3000/api/auth/google/callback` as an authorized redirect URI.
-   For Vercel, also add `https://YOUR-DOMAIN.vercel.app/api/auth/google/callback` using your exact production domain.
-5. Copy `.env.example` to `.env.local` and fill in the client ID and client secret.
-6. Set `MEGADRIVE_ENCRYPTION_KEY` to a unique private string of at least 24 characters. Do not change it after connecting accounts.
+The official build uses the **MegaDrive Production** Google Cloud project.
 
-The app needs the full Drive scope because narrower `drive.file` access cannot manage files created outside MegaDrive. Public distribution may require Google OAuth verification; personal accounts added as test users can be used while the consent screen remains in Testing.
+1. Enable the Google Drive API.
+2. Configure Google Auth Platform with an External audience.
+3. Add development accounts under **Audience → Test users** while the app remains in Testing.
+4. Add `openid`, `userinfo.email`, `userinfo.profile`, and `https://www.googleapis.com/auth/drive` under **Data Access**.
+5. Create an OAuth client of type **Desktop app**.
+6. Keep the downloaded `client_secret_*.json` outside version control.
 
-## Run
+MegaDrive embeds only the Desktop client ID. Desktop OAuth uses PKCE and does not use the client secret.
 
-Requires Node.js 22.13 or newer.
+## Forks and local overrides
+
+Fork maintainers should create a separate Google Cloud project and Desktop client:
 
 ```powershell
-npm install
-npm run dev
+$env:MEGADRIVE_GOOGLE_CLIENT_ID="YOUR_DESKTOP_CLIENT_ID.apps.googleusercontent.com"
+python app.py
 ```
 
-Open `http://localhost:3000`. For a production process, run `npm run build` and then `npm start`.
+Never publish a Web OAuth client secret or downloaded credential JSON.
 
-The local dashboard supports whole-folder uploads with nested Drive folders, 32 MB resumable chunks, and automatic retry. Keep the browser tab and local server running until the upload queue finishes.
+## OAuth verification
 
-## Security behavior
+The full Drive scope is restricted. Before opening MegaDrive to all Google users:
 
-- OAuth state uses an HTTP-only, SameSite cookie.
-- Refresh tokens are AES-256-GCM encrypted in `.data/accounts.enc`.
-- Vercel deployments require an Upstash Redis integration for durable encrypted account tokens and resumable upload sessions. Install it from the Vercel Marketplace and redeploy; the integration injects the required Redis REST environment variables.
-- Uploads use resumable chunks and show real progress.
-- Cross-account copies keep the source and verify destination size and checksum when available.
-- Permanent deletion requires explicit confirmation.
-- Disconnecting removes local credentials without changing Google Drive files.
+1. Publish a homepage, privacy policy, terms, and user-help page on a verified domain.
+2. Verify domain ownership in Google Search Console using a Google Cloud project owner account.
+3. Ensure consent-screen scopes exactly match the application request.
+4. Record a demonstration video showing connection, listing, upload, transfer, trash, permission blocking, and disconnect/revocation.
+5. Explain why `drive.file` cannot manage pre-existing files across multiple accounts.
+6. Submit the application for brand and restricted-scope verification.
+7. Explain that tokens and files remain on-device and no developer-controlled backend receives restricted Drive data.
+
+Google decides whether an additional assessment is required.
+
+## Runtime storage
+
+`app.py` generates and passes these values only to the local child process:
+
+- `MEGADRIVE_DATA_DIR`
+- `MEGADRIVE_ENCRYPTION_KEY`
+- `MEGADRIVE_WORKSPACE_ID`
+- `MEGADRIVE_LOCAL_MODE=1`
+
+They are stored under the operating system's application-data directory, not the repository.
+
+## Release checklist
+
+```powershell
+npx tsc --noEmit --incremental false
+npm test
+npm run build
+python app.py --help
+```

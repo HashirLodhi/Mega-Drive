@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_ORIGIN ?? "http://localhost:3000"),
+  metadataBase: new URL("http://127.0.0.1"),
   title: "MegaDrive — Every drive. One calm workspace.",
   description: "Connect Google Drive accounts, understand your storage, and move files safely between them.",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },

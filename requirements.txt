@@ -1,0 +1,2 @@
+# MegaDrive's Python launcher uses only the Python standard library.
+# Application dependencies are pinned in package-lock.json and installed by app.py.

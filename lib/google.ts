@@ -1,18 +1,18 @@
 import "server-only";
 import type { ConnectedAccount, DriveItem, PublicAccount, StoredToken } from "./types";
 import { updateAccount } from "./store";
+import { bundledGoogleClientId } from "./oauth-client";
 
 const tokenEndpoint = "https://oauth2.googleapis.com/token";
 const driveBase = "https://www.googleapis.com/drive/v3";
 
 function oauthConfig() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error("Google OAuth environment variables are not configured");
-  return { clientId, clientSecret };
+  const clientId = process.env.MEGADRIVE_GOOGLE_CLIENT_ID || bundledGoogleClientId;
+  if (!clientId) throw new Error("Google Desktop OAuth client ID is not configured");
+  return { clientId };
 }
 
-export function authorizationUrl(state: string, redirectUri: string) {
+export function authorizationUrl(state: string, redirectUri: string, codeChallenge: string) {
   const { clientId } = oauthConfig();
   const params = new URLSearchParams({
     client_id: clientId,
@@ -22,14 +22,16 @@ export function authorizationUrl(state: string, redirectUri: string) {
     prompt: "consent select_account",
     include_granted_scopes: "true",
     state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
     scope: "openid email profile https://www.googleapis.com/auth/drive",
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
-export async function exchangeCode(code: string, redirectUri: string): Promise<StoredToken> {
-  const { clientId, clientSecret } = oauthConfig();
-  const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: "authorization_code" }), cache: "no-store" });
+export async function exchangeCode(code: string, redirectUri: string, codeVerifier: string): Promise<StoredToken> {
+  const { clientId } = oauthConfig();
+  const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: clientId, code_verifier: codeVerifier, redirect_uri: redirectUri, grant_type: "authorization_code" }), cache: "no-store" });
   if (!response.ok) throw new Error(`Google token exchange failed: ${await response.text()}`);
   const result = await response.json() as { access_token: string; refresh_token?: string; expires_in: number; scope: string };
   if (!result.refresh_token) throw new Error("Google did not return a refresh token. Revoke the app grant and connect again.");
@@ -38,8 +40,8 @@ export async function exchangeCode(code: string, redirectUri: string): Promise<S
 
 async function accessToken(account: ConnectedAccount) {
   if (account.token.expiresAt > Date.now() + 60_000) return account.token.accessToken;
-  const { clientId, clientSecret } = oauthConfig();
-  const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, refresh_token: account.token.refreshToken, grant_type: "refresh_token" }), cache: "no-store" });
+  const { clientId } = oauthConfig();
+  const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: clientId, refresh_token: account.token.refreshToken, grant_type: "refresh_token" }), cache: "no-store" });
   if (!response.ok) throw new Error(`Google token refresh failed: ${response.status}`);
   const result = await response.json() as { access_token: string; expires_in: number; scope?: string };
   account.token = { ...account.token, accessToken: result.access_token, expiresAt: Date.now() + result.expires_in * 1000, scope: result.scope ?? account.token.scope };
@@ -57,6 +59,11 @@ export async function googleFetch(account: ConnectedAccount, url: string, init: 
     throw new Error(`Google API ${response.status}: ${body.slice(0, 500)}`);
   }
   return response;
+}
+
+export async function revokeGoogleAccount(account: ConnectedAccount) {
+  const response = await fetch("https://oauth2.googleapis.com/revoke", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: account.token.refreshToken }), cache: "no-store" });
+  if (!response.ok && response.status !== 400) throw new Error(`Google access revocation failed (${response.status})`);
 }
 
 export async function readProfile(token: StoredToken) {

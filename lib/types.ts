@@ -30,5 +30,10 @@ export type DriveItem = {
   webViewLink?: string;
   iconLink?: string;
   md5Checksum?: string;
-  capabilities?: { canDownload?: boolean; canTrash?: boolean; canDelete?: boolean; canCopy?: boolean };
+  ownedByMe?: boolean;
+  shared?: boolean;
+  sharedWithMeTime?: string;
+  driveId?: string;
+  owners?: { displayName?: string; emailAddress?: string; photoLink?: string }[];
+  capabilities?: { canDownload?: boolean; canTrash?: boolean; canDelete?: boolean; canCopy?: boolean; canEdit?: boolean; canRemoveMyDriveParent?: boolean };
 };

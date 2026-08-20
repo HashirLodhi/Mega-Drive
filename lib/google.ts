@@ -76,7 +76,7 @@ export async function publicAccount(account: ConnectedAccount): Promise<PublicAc
 export async function listDriveFiles(account: ConnectedAccount, options: { trashed?: boolean; query?: string; pageToken?: string | null }) {
   const filters = [`trashed = ${options.trashed ? "true" : "false"}`];
   if (options.query) filters.push(`name contains '${options.query.replaceAll("'", "\\'")}'`);
-  const params = new URLSearchParams({ q: filters.join(" and "), pageSize: "100", orderBy: "modifiedTime desc", fields: "nextPageToken,files(id,name,mimeType,size,modifiedTime,createdTime,parents,trashed,webViewLink,iconLink,md5Checksum,capabilities(canDownload,canTrash,canDelete,canCopy))", spaces: "drive", supportsAllDrives: "true", includeItemsFromAllDrives: "true" });
+  const params = new URLSearchParams({ q: filters.join(" and "), pageSize: "100", orderBy: "modifiedTime desc", fields: "nextPageToken,files(id,name,mimeType,size,modifiedTime,createdTime,parents,trashed,webViewLink,iconLink,md5Checksum,ownedByMe,shared,sharedWithMeTime,driveId,owners(displayName,emailAddress,photoLink),capabilities(canDownload,canTrash,canDelete,canCopy,canEdit,canRemoveMyDriveParent))", spaces: "drive", supportsAllDrives: "true", includeItemsFromAllDrives: "true" });
   if (options.pageToken) params.set("pageToken", options.pageToken);
   const response = await googleFetch(account, `${driveBase}/files?${params}`);
   return response.json() as Promise<{ files: DriveItem[]; nextPageToken?: string }>;
@@ -85,6 +85,11 @@ export async function listDriveFiles(account: ConnectedAccount, options: { trash
 export async function setTrashed(account: ConnectedAccount, fileId: string, trashed: boolean) {
   const response = await googleFetch(account, `${driveBase}/files/${encodeURIComponent(fileId)}?fields=id,trashed&supportsAllDrives=true`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ trashed }) });
   return response.json();
+}
+
+export async function removeFromMyDrive(account: ConnectedAccount, fileId: string, parentId: string) {
+  const params = new URLSearchParams({ removeParents: parentId, fields: "id,parents", supportsAllDrives: "true" });
+  await googleFetch(account, `${driveBase}/files/${encodeURIComponent(fileId)}?${params}`, { method: "PATCH" });
 }
 
 export async function permanentlyDelete(account: ConnectedAccount, fileId: string) {

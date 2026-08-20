@@ -8,13 +8,12 @@ const driveBase = "https://www.googleapis.com/drive/v3";
 function oauthConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  if (!clientId || !clientSecret || !redirectUri) throw new Error("Google OAuth environment variables are not configured");
-  return { clientId, clientSecret, redirectUri };
+  if (!clientId || !clientSecret) throw new Error("Google OAuth environment variables are not configured");
+  return { clientId, clientSecret };
 }
 
-export function authorizationUrl(state: string) {
-  const { clientId, redirectUri } = oauthConfig();
+export function authorizationUrl(state: string, redirectUri: string) {
+  const { clientId } = oauthConfig();
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -28,8 +27,8 @@ export function authorizationUrl(state: string) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
-export async function exchangeCode(code: string): Promise<StoredToken> {
-  const { clientId, clientSecret, redirectUri } = oauthConfig();
+export async function exchangeCode(code: string, redirectUri: string): Promise<StoredToken> {
+  const { clientId, clientSecret } = oauthConfig();
   const response = await fetch(tokenEndpoint, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: "authorization_code" }), cache: "no-store" });
   if (!response.ok) throw new Error(`Google token exchange failed: ${await response.text()}`);
   const result = await response.json() as { access_token: string; refresh_token?: string; expires_in: number; scope: string };

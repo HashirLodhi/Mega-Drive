@@ -8,6 +8,7 @@ MegaDrive starts empty and uses only live Google Drive data after account connec
 2. Configure the OAuth consent screen. While its publishing status is Testing, add every account you will connect as a test user.
 3. Create an **OAuth client ID** of type **Web application**.
 4. Add `http://localhost:3000/api/auth/google/callback` as an authorized redirect URI.
+   For Vercel, also add `https://YOUR-DOMAIN.vercel.app/api/auth/google/callback` using your exact production domain.
 5. Copy `.env.example` to `.env.local` and fill in the client ID and client secret.
 6. Set `MEGADRIVE_ENCRYPTION_KEY` to a unique private string of at least 24 characters. Do not change it after connecting accounts.
 

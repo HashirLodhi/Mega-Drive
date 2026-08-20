@@ -28,6 +28,7 @@ Open `http://localhost:3000`. For a production process, run `npm run build` and 
 
 - OAuth state uses an HTTP-only, SameSite cookie.
 - Refresh tokens are AES-256-GCM encrypted in `.data/accounts.enc`.
+- On Vercel, filesystem data uses `/tmp/megadrive` to avoid the read-only `/var/task` directory. `/tmp` is ephemeral, so use a durable database before serving multiple users or relying on accounts surviving cold starts.
 - Uploads use resumable chunks and show real progress.
 - Cross-account copies keep the source and verify destination size and checksum when available.
 - Permanent deletion requires explicit confirmation.

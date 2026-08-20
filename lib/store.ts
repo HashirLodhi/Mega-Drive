@@ -1,12 +1,12 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { ConnectedAccount } from "./types";
+import { dataPath } from "./data-path";
 
 type Database = { accounts: ConnectedAccount[] };
-const dataDir = path.join(process.cwd(), ".data");
-const dataFile = path.join(dataDir, "accounts.enc");
+const dataDir = dataPath();
+const dataFile = dataPath("accounts.enc");
 
 function key() {
   const secret = process.env.MEGADRIVE_ENCRYPTION_KEY;

@@ -6,6 +6,7 @@ export type StoredToken = {
 };
 
 export type ConnectedAccount = {
+  workspaceId: string;
   id: string;
   email: string;
   name: string;
@@ -14,7 +15,7 @@ export type ConnectedAccount = {
   connectedAt: string;
 };
 
-export type PublicAccount = Omit<ConnectedAccount, "token"> & {
+export type PublicAccount = Omit<ConnectedAccount, "token" | "workspaceId"> & {
   storage: { limit: number | null; usage: number; usageInDrive: number; usageInTrash: number };
 };
 

@@ -15,7 +15,7 @@ function key() {
   return createHash("sha256").update(secret).digest();
 }
 
-const accountsKey = "megadrive:accounts:v1";
+const accountsKey = (workspaceId: string) => `megadrive:workspace:${workspaceId}:accounts:v1`;
 let localWriteQueue = Promise.resolve();
 
 function encrypt(value: unknown) {
@@ -60,35 +60,35 @@ function useRedis() {
   return false;
 }
 
-export async function listAccounts() {
+export async function listAccounts(workspaceId: string) {
   if (useRedis()) {
-    const values = await redis().hvals(accountsKey) as string[];
+    const values = await redis().hvals(accountsKey(workspaceId)) as string[];
     return values.map((value) => decrypt<ConnectedAccount>(value));
   }
-  return (await readDatabase()).accounts;
+  return (await readDatabase()).accounts.filter((account) => account.workspaceId === workspaceId);
 }
-export async function getAccount(id: string) {
-  if (useRedis()) { const value = await redis().hget<string>(accountsKey, id); return value ? decrypt<ConnectedAccount>(value) : null; }
-  return (await readDatabase()).accounts.find((account) => account.id === id) ?? null;
+export async function getAccount(workspaceId: string, id: string) {
+  if (useRedis()) { const value = await redis().hget<string>(accountsKey(workspaceId), id); return value ? decrypt<ConnectedAccount>(value) : null; }
+  return (await readDatabase()).accounts.find((account) => account.workspaceId === workspaceId && account.id === id) ?? null;
 }
 export async function saveAccount(account: ConnectedAccount) {
   if (useRedis()) {
-    const existing = await listAccounts();
+    const existing = await listAccounts(account.workspaceId);
     const duplicateIds = existing.filter((item) => item.email === account.email && item.id !== account.id).map((item) => item.id);
     const transaction = redis().multi();
-    if (duplicateIds.length) transaction.hdel(accountsKey, ...duplicateIds);
-    transaction.hset(accountsKey, { [account.id]: encrypt(account) });
+    if (duplicateIds.length) transaction.hdel(accountsKey(account.workspaceId), ...duplicateIds);
+    transaction.hset(accountsKey(account.workspaceId), { [account.id]: encrypt(account) });
     await transaction.exec();
     return;
   }
   const database = await readDatabase();
-  database.accounts = [account, ...database.accounts.filter((item) => item.id !== account.id && item.email !== account.email)];
+  database.accounts = [account, ...database.accounts.filter((item) => item.workspaceId !== account.workspaceId || (item.id !== account.id && item.email !== account.email))];
   await writeDatabase(database);
 }
-export async function removeAccount(id: string) {
-  if (useRedis()) { await redis().hdel(accountsKey, id); return; }
+export async function removeAccount(workspaceId: string, id: string) {
+  if (useRedis()) { await redis().hdel(accountsKey(workspaceId), id); return; }
   const database = await readDatabase();
-  database.accounts = database.accounts.filter((account) => account.id !== id);
+  database.accounts = database.accounts.filter((account) => account.workspaceId !== workspaceId || account.id !== id);
   await writeDatabase(database);
 }
 export async function updateAccount(account: ConnectedAccount) { await saveAccount(account); }

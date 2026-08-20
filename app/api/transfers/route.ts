@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { driveBase, googleFetch } from "@/lib/google";
 import { getAccount } from "@/lib/store";
 import type { DriveItem } from "@/lib/types";
+import { workspaceFromRequest } from "@/lib/workspace";
 
 export const runtime = "nodejs";
 const googleNativePrefix = "application/vnd.google-apps.";
 
-async function transferOne(sourceId: string, destinationId: string, fileId: string) {
-  const [source, destination] = await Promise.all([getAccount(sourceId), getAccount(destinationId)]);
+async function transferOne(workspaceId:string,sourceId: string, destinationId: string, fileId: string) {
+  const [source, destination] = await Promise.all([getAccount(workspaceId,sourceId), getAccount(workspaceId,destinationId)]);
   if (!source || !destination) throw new Error("Source or destination account is no longer connected");
   if (source.id === destination.id) throw new Error("Choose a different destination account");
   const metadataResponse = await googleFetch(source, `${driveBase}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,md5Checksum,capabilities(canDownload,canCopy)&supportsAllDrives=true`);
@@ -43,9 +44,10 @@ async function transferOne(sourceId: string, destinationId: string, fileId: stri
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as { sourceAccountId?: string; destinationAccountId?: string; fileIds?: string[] };
+    const workspaceId=workspaceFromRequest(request);if(!workspaceId)return NextResponse.json({error:"Workspace session is required"},{status:401});
     if (!body.sourceAccountId || !body.destinationAccountId || !body.fileIds?.length) return NextResponse.json({ error: "Source, destination, and files are required" }, { status: 400 });
     const results = [];
-    for (const fileId of body.fileIds) results.push(await transferOne(body.sourceAccountId, body.destinationAccountId, fileId));
+    for (const fileId of body.fileIds) results.push(await transferOne(workspaceId,body.sourceAccountId, body.destinationAccountId, fileId));
     return NextResponse.json({ results, sourceRetained: true });
   } catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 502 }); }
 }

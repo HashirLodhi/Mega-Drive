@@ -69,7 +69,7 @@ export async function publicAccount(account: ConnectedAccount): Promise<PublicAc
   const response = await googleFetch(account, `${driveBase}/about?fields=storageQuota`);
   const data = await response.json() as { storageQuota?: { limit?: string; usage?: string; usageInDrive?: string; usageInDriveTrash?: string } };
   const quota = data.storageQuota ?? {};
-  const { token: _token, ...safeAccount } = account;
+  const { token: _token, workspaceId: _workspaceId, ...safeAccount } = account;
   return { ...safeAccount, storage: { limit: quota.limit ? Number(quota.limit) : null, usage: Number(quota.usage ?? 0), usageInDrive: Number(quota.usageInDrive ?? 0), usageInTrash: Number(quota.usageInDriveTrash ?? 0) } };
 }
 

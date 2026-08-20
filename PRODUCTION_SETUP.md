@@ -25,6 +25,8 @@ npm run dev
 
 Open `http://localhost:3000`. For a production process, run `npm run build` and then `npm start`.
 
+The local dashboard supports whole-folder uploads with nested Drive folders, 32 MB resumable chunks, and automatic retry. Keep the browser tab and local server running until the upload queue finishes.
+
 ## Security behavior
 
 - OAuth state uses an HTTP-only, SameSite cookie.

@@ -82,6 +82,23 @@ export async function listDriveFiles(account: ConnectedAccount, options: { trash
   return response.json() as Promise<{ files: DriveItem[]; nextPageToken?: string }>;
 }
 
+export async function ensureDriveFolderPath(account: ConnectedAccount, segments: string[]) {
+  let parentId = "root";
+  for (const rawName of segments) {
+    const name = rawName.trim();
+    if (!name || name === "." || name === "..") continue;
+    const escapedName = name.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+    const query = `name = '${escapedName}' and mimeType = 'application/vnd.google-apps.folder' and '${parentId}' in parents and trashed = false`;
+    const params = new URLSearchParams({ q: query, pageSize: "1", fields: "files(id)", spaces: "drive" });
+    const existingResponse = await googleFetch(account, `${driveBase}/files?${params}`);
+    const existing = await existingResponse.json() as { files?: { id: string }[] };
+    if (existing.files?.[0]) { parentId = existing.files[0].id; continue; }
+    const createdResponse = await googleFetch(account, `${driveBase}/files?fields=id`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parentId] }) });
+    parentId = ((await createdResponse.json()) as { id: string }).id;
+  }
+  return parentId;
+}
+
 export async function setTrashed(account: ConnectedAccount, fileId: string, trashed: boolean) {
   const response = await googleFetch(account, `${driveBase}/files/${encodeURIComponent(fileId)}?fields=id,trashed&supportsAllDrives=true`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ trashed }) });
   return response.json();

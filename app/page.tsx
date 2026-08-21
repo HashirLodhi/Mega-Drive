@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import LiveDashboard from "./LiveDashboard";
+import AiChat from "./AiChat";
 
 type Account = {
   id: string;
@@ -204,6 +205,7 @@ function DemoHome() {
         {dialog === "connect" ? <><span className="modal-symbol">G</span><h2 id="dialog-title">Connect a Google account</h2><p>Sign in with Google to view and manage this account’s Drive. MegaDrive never stores your files.</p><div className="permission-list"><span>✓ View files and storage capacity</span><span>✓ Upload, copy, and organize files</span><span>✓ Move files to trash only when you approve</span></div><button className="google-button" onClick={connectDemoAccount}><b>G</b> Continue with Google</button><small className="demo-copy">Demo mode: adds a sample account until OAuth credentials are configured.</small></> : <><span className="modal-symbol transfer-symbol">⇄</span><h2 id="dialog-title">Transfer {selected.length} item{selected.length !== 1 ? "s" : ""}</h2><p>We’ll copy each item, verify it at the destination, and keep the original safe.</p><label className="destination-label">Destination drive<select value={destination} onChange={(e) => setDestination(e.target.value)}>{accounts.filter((account) => !files.filter((file) => selected.includes(file.id)).some((file) => file.accountId === account.id)).map((account) => <option value={account.id} key={account.id}>{account.name} · {(account.total - account.used).toFixed(1)} GB free</option>)}</select></label><div className="safe-transfer"><span>✓</span><div><strong>Safe transfer enabled</strong><small>The source files won’t be removed automatically.</small></div></div><button className="primary modal-action" onClick={transferSelected}>Start verified transfer</button></>}
       </div></div>}
       {toast && <div className="toast" role="status"><span>✓</span>{toast}</div>}
+      <AiChat />
     </main>
   );
 }
